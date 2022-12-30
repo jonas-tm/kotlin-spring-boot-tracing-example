@@ -43,16 +43,6 @@ class Controller(
 
 		observeCtx { log.info("test log with tracing info") }
 
-		Mono.deferContextual { contextView ->
-			ContextSnapshot.setThreadLocalsFrom(
-				contextView,
-				ObservationThreadLocalAccessor.KEY
-			).use {
-				log.info("test log with tracing info")
-				Mono.empty<String>()
-			}
-		}.awaitSingleOrNull()
-
 		// make web client call and return response
 		return webClient.get()
 			.uri("/todos/1")
