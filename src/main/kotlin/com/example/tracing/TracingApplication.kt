@@ -1,8 +1,6 @@
 package com.example.tracing
 
 import io.micrometer.context.ContextSnapshot
-import io.micrometer.observation.Observation
-import io.micrometer.observation.ObservationRegistry
 import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.reactor.awaitSingle
@@ -12,7 +10,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.reactive.function.client.ExchangeFilterFunction
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import kotlin.time.Duration.Companion.seconds
@@ -26,11 +23,10 @@ fun main(args: Array<String>) {
 
 @RestController
 class Controller(
-	observationRegistry: ObservationRegistry
+	webClientBuilder: WebClient.Builder
 ) {
 
-	val webClient = WebClient.builder()
-		.filter(trace("todo.api", observationRegistry))
+	val webClient = webClientBuilder
 		.baseUrl("https://jsonplaceholder.typicode.com")
 		.build()
 
@@ -62,34 +58,4 @@ suspend inline fun observeCtx(crossinline f: () -> Unit) {
 			Mono.empty<Unit>()
 		}
 	}.awaitSingleOrNull()
-}
-
-fun trace(name: String, observationRegistry: ObservationRegistry)= ExchangeFilterFunction { clientRequest, next ->
-	Mono.deferContextual { contextView ->
-		ContextSnapshot.setThreadLocalsFrom(
-			contextView,
-			ObservationThreadLocalAccessor.KEY
-		).use {
-			val observation = Observation.start(name, observationRegistry)
-			observation.parentObservation(observationRegistry.currentObservation)
-			observation.lowCardinalityKeyValue("uri", clientRequest.url().toString())
-			observation.lowCardinalityKeyValue("method", clientRequest.method().name())
-
-			Mono.just(observation).flatMap {
-				next.exchange(clientRequest)
-			}.doOnError {
-				observation.error(it)
-			}.doFinally {
-				observation.stop()
-			}.doOnSuccess {
-				observation.highCardinalityKeyValue("status", it.statusCode().value().toString())
-				observation.lowCardinalityKeyValue("outcome", when {
-					it.statusCode().is2xxSuccessful -> "SUCCESS"
-					it.statusCode().is4xxClientError -> "CLIENT ERROR"
-					it.statusCode().is5xxServerError -> "SERVER ERROR"
-					else -> "OTHER ERROR"
-				})
-			}
-		}
-	}
 }
