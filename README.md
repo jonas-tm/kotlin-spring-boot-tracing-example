@@ -6,8 +6,8 @@ It contains the following features:
 - Spring Boot 3 Webflux
 - Micrometer Tracing
 - Zipkin tracing export
-- Spring WebClient Observability Filter 
 - Reactive logs with tracing data
+- Custom observations in reactive streams
 
 ## Requirements
 - JVM 1.7+

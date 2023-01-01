@@ -1,10 +1,15 @@
 package com.example.tracing
 
 import io.micrometer.context.ContextSnapshot
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
 import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.reactor.mono
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -23,6 +28,7 @@ fun main(args: Array<String>) {
 
 @RestController
 class Controller(
+	val observationRegistry: ObservationRegistry,
 	webClientBuilder: WebClient.Builder
 ) {
 
@@ -34,10 +40,15 @@ class Controller(
 
 	@GetMapping("/test")
 	suspend fun test(): String {
-		// simulate some complex calculation
-		delay(1.seconds)
+		observeCtx {
+			val currentObservation = observationRegistry.currentObservation
+			currentObservation?.highCardinalityKeyValue("test_key", "test sample value")
+			log.info("test log with tracing info")
+		}
 
-		observeCtx { log.info("test log with tracing info") }
+		runObserved("delay", observationRegistry) {
+			delay(1.seconds)
+		}
 
 		// make web client call and return response
 		return webClient.get()
@@ -56,6 +67,25 @@ suspend inline fun observeCtx(crossinline f: () -> Unit) {
 		).use {
 			f()
 			Mono.empty<Unit>()
+		}
+	}.awaitSingleOrNull()
+}
+
+suspend fun runObserved(name: String, observationRegistry: ObservationRegistry, f: suspend () -> Unit) {
+	Mono.deferContextual { contextView ->
+		ContextSnapshot.setThreadLocalsFrom(
+			contextView,
+			ObservationThreadLocalAccessor.KEY
+		).use {
+			val observation = Observation.start(name, observationRegistry)
+			Mono.just(observation).flatMap {
+				mono { f() }
+			}.doOnError {
+				observation.error(it)
+				observation.stop()
+			}.doOnSuccess {
+				observation.stop()
+			}
 		}
 	}.awaitSingleOrNull()
 }
