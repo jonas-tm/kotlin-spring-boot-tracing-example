@@ -15,7 +15,6 @@ java.sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
 	mavenCentral()
-	maven("https://repo.spring.io/release")
 }
 
 dependencies {
@@ -36,7 +35,7 @@ dependencies {
 	runtimeOnly("com.h2database:h2")
 	runtimeOnly("io.r2dbc:r2dbc-h2")
 
-	implementation("org.springframework.experimental:r2dbc-micrometer-spring-boot:1.0.0")
+	implementation("org.springframework.experimental:r2dbc-micrometer-spring-boot:1.0.1")
 
 	// Added Micrometer Tracing dependencies
 	implementation(platform("io.micrometer:micrometer-tracing-bom:$micrometer_tracing"))
