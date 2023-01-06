@@ -5,6 +5,8 @@ import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationRegistry
 import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.count
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
@@ -13,6 +15,10 @@ import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
+import org.springframework.data.annotation.Id
+import org.springframework.data.relational.core.mapping.Column
+import org.springframework.data.relational.core.mapping.Table
+import org.springframework.data.repository.kotlin.CoroutineCrudRepository
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.client.WebClient
@@ -29,6 +35,7 @@ fun main(args: Array<String>) {
 @RestController
 class Controller(
 	val observationRegistry: ObservationRegistry,
+	val todoRepo: ToDoRepository,
 	webClientBuilder: WebClient.Builder
 ) {
 
@@ -37,6 +44,13 @@ class Controller(
 		.build()
 
 	val log = LoggerFactory.getLogger(javaClass)
+
+	@GetMapping("/dbcall")
+	suspend fun dbcall(): String {
+		val entryCount = todoRepo.findAll().count()
+		observeCtx { log.info("entries in db: {}", entryCount) }
+		return "done"
+	}
 
 	@GetMapping("/test")
 	suspend fun test(): String {
@@ -50,6 +64,10 @@ class Controller(
 			delay(1.seconds)
 		}
 
+		// Sample DB call
+		val entryCount = todoRepo.findAll().count()
+		observeCtx { log.info("entries in db: {}", entryCount) }
+
 		// make web client call and return response
 		return webClient.get()
 			.uri("/todos/1")
@@ -57,6 +75,17 @@ class Controller(
 			.bodyToMono(String::class.java)
 			.awaitSingle();
 	}
+}
+
+@Table("todo")
+data class ToDo(
+	@Id
+	val id: Long = 0,
+	val title: String,
+)
+
+interface ToDoRepository : CoroutineCrudRepository<ToDo, Long> {
+	override fun findAll(): Flow<ToDo>
 }
 
 suspend inline fun observeCtx(crossinline f: () -> Unit) {
