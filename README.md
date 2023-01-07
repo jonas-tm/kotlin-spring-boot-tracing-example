@@ -3,9 +3,10 @@
 This repository contains a simple demo application showing the usage of [Micrometer Tracing](https://micrometer.io/docs/tracing).
 
 It contains the following features:
-- Spring Boot 3 Webflux
-- Micrometer Tracing
-- Zipkin tracing export
+- [Spring Boot 3 Webflux](https://docs.spring.io/spring-framework/docs/current/reference/html/web-reactive.html)
+- [Micrometer Tracing](https://micrometer.io/docs/tracing)
+- [Zipkin tracing export](https://github.com/open-telemetry/opentelemetry-java/tree/main/exporters/zipkin)
+- [R2DBC Database Tracing](https://github.com/spring-projects-experimental/r2dbc-micrometer-spring-boot)
 - Reactive logs with tracing data
 - Custom observations in reactive streams
 

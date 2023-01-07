@@ -5,7 +5,7 @@ import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationRegistry
 import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
@@ -55,7 +55,6 @@ class Controller(
 
 		// Sample traced DB call
 		val dbTodos = todoRepo.findAll().toList()
-
 
 		// make web client call and return response
 		val externalTodos =  webClient.get()
