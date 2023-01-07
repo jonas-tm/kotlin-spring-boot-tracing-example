@@ -4,15 +4,17 @@ import io.micrometer.context.ContextSnapshot
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationRegistry
 import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
+import org.springframework.data.annotation.Id
+import org.springframework.data.relational.core.mapping.Table
+import org.springframework.data.repository.kotlin.CoroutineCrudRepository
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.client.WebClient
@@ -29,6 +31,7 @@ fun main(args: Array<String>) {
 @RestController
 class Controller(
 	val observationRegistry: ObservationRegistry,
+	val todoRepo: ToDoRepository,
 	webClientBuilder: WebClient.Builder
 ) {
 
@@ -50,14 +53,28 @@ class Controller(
 			delay(1.seconds)
 		}
 
+		// Sample traced DB call
+		val dbTodos = todoRepo.findAll().toList()
+
 		// make web client call and return response
-		return webClient.get()
+		val externalTodos =  webClient.get()
 			.uri("/todos/1")
 			.retrieve()
 			.bodyToMono(String::class.java)
-			.awaitSingle();
+			.awaitSingle()
+
+		return "${dbTodos.size} $externalTodos"
 	}
 }
+
+@Table("todo")
+data class ToDo(
+	@Id
+	val id: Long = 0,
+	val title: String,
+)
+
+interface ToDoRepository : CoroutineCrudRepository<ToDo, Long>
 
 suspend inline fun observeCtx(crossinline f: () -> Unit) {
 	Mono.deferContextual { contextView ->
