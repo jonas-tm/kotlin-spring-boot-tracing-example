@@ -4,19 +4,15 @@ import io.micrometer.context.ContextSnapshot
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationRegistry
 import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.count
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.reactor.mono
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.data.annotation.Id
-import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
 import org.springframework.data.repository.kotlin.CoroutineCrudRepository
 import org.springframework.web.bind.annotation.GetMapping
@@ -45,13 +41,6 @@ class Controller(
 
 	val log = LoggerFactory.getLogger(javaClass)
 
-	@GetMapping("/dbcall")
-	suspend fun dbcall(): String {
-		val entryCount = todoRepo.findAll().count()
-		observeCtx { log.info("entries in db: {}", entryCount) }
-		return "done"
-	}
-
 	@GetMapping("/test")
 	suspend fun test(): String {
 		observeCtx {
@@ -64,16 +53,18 @@ class Controller(
 			delay(1.seconds)
 		}
 
-		// Sample DB call
-		val entryCount = todoRepo.findAll().count()
-		observeCtx { log.info("entries in db: {}", entryCount) }
+		// Sample traced DB call
+		val list = todoRepo.findAll().toList()
+
 
 		// make web client call and return response
-		return webClient.get()
+		val todos =  webClient.get()
 			.uri("/todos/1")
 			.retrieve()
 			.bodyToMono(String::class.java)
-			.awaitSingle();
+			.awaitSingle()
+
+		return "${list.size} $todos"
 	}
 }
 
@@ -84,9 +75,7 @@ data class ToDo(
 	val title: String,
 )
 
-interface ToDoRepository : CoroutineCrudRepository<ToDo, Long> {
-	override fun findAll(): Flow<ToDo>
-}
+interface ToDoRepository : CoroutineCrudRepository<ToDo, Long>
 
 suspend inline fun observeCtx(crossinline f: () -> Unit) {
 	Mono.deferContextual { contextView ->

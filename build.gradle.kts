@@ -36,6 +36,9 @@ dependencies {
 	runtimeOnly("com.h2database:h2")
 	runtimeOnly("io.r2dbc:r2dbc-h2")
 
+	// force proxy version
+	implementation("io.r2dbc:r2dbc-proxy:1.1.0.RELEASE")
+	// R2DBC micrometer auto tracing
 	implementation("org.springframework.experimental:r2dbc-micrometer-spring-boot:1.0.2-SNAPSHOT")
 
 	// Added Micrometer Tracing dependencies
