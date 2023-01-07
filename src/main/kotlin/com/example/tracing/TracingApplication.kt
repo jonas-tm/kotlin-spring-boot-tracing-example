@@ -54,17 +54,17 @@ class Controller(
 		}
 
 		// Sample traced DB call
-		val list = todoRepo.findAll().toList()
+		val dbTodos = todoRepo.findAll().toList()
 
 
 		// make web client call and return response
-		val todos =  webClient.get()
+		val externalTodos =  webClient.get()
 			.uri("/todos/1")
 			.retrieve()
 			.bodyToMono(String::class.java)
 			.awaitSingle()
 
-		return "${list.size} $todos"
+		return "${dbTodos.size} $externalTodos"
 	}
 }
 
