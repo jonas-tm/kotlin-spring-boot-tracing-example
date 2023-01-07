@@ -1,4 +1,4 @@
-# Micrometer Tracing with Spring Boot Webflux and Kotlin
+# Micrometer Tracing with Spring Boot WebFlux and Kotlin
 
 This repository contains a simple demo application showing the usage of [Micrometer Tracing](https://micrometer.io/docs/tracing).
 
