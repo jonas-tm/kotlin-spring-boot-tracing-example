@@ -10,6 +10,8 @@ It contains the following features:
 - Reactive logs with tracing data
 - Custom observations in reactive streams
 
+![zipkin.png](docs%2Fimages%2Fzipkin.png)
+
 ## Requirements
 - JVM 1.7+
 - Docker
@@ -23,5 +25,3 @@ It contains the following features:
    - http://localhost:8080/test
 3. Open Zipkin UI and query for traces
    - http://localhost:9411/zipkin/
-
-![zipkin.png](docs%2Fimages%2Fzipkin.png)
